@@ -5,6 +5,9 @@ import { OrbitControls, PerspectiveCamera, Stars, Environment, useTexture } from
 import * as THREE from 'three';
 
 const Bonsho: React.FC = () => {
+  const groupRef = useRef<THREE.Group>(null);
+  const materialRef = useRef<THREE.MeshStandardMaterial>(null);
+
   const points = useMemo(() => {
     const p = [];
     p.push(new THREE.Vector2(1.8, -1.5));
@@ -48,37 +51,63 @@ const Bonsho: React.FC = () => {
     return items;
   }, []);
   
-  return (
-    <group position={[0, 1.0, 0]}>
-      <mesh castShadow receiveShadow>
-        <latheGeometry args={[points, 64]} />
-        <meshStandardMaterial 
-          color="#6d5440" 
-          metalness={0.7} 
-          roughness={0.4}
-          envMapIntensity={1.5}
-        />
-      </mesh>
-      
-      <group>{nubs}</group>
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    
+    // Gentle Sway Animation
+    // We rotate the parent group which is positioned at the hanging point (pivot)
+    if (groupRef.current) {
+      // Compound sine waves for organic, non-repetitive feeling sway
+      groupRef.current.rotation.z = Math.sin(t * 0.5) * 0.015 + Math.sin(t * 1.1) * 0.005;
+      groupRef.current.rotation.x = Math.sin(t * 0.3) * 0.01 + Math.cos(t * 0.7) * 0.003;
+    }
 
-      {/* Ryuzu */}
-      <group position={[0, 1.7, 0]}>
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.3, 0.1, 16, 32]} />
-          <meshStandardMaterial color="#3e2723" metalness={0.8} roughness={0.4} />
+    // Subtle Shimmer Effect
+    // Pulse the emissive intensity to give a "breathing" life-like metallic sheen
+    if (materialRef.current) {
+      materialRef.current.emissiveIntensity = 0.05 + Math.sin(t * 2.5) * 0.03;
+    }
+  });
+  
+  // Adjusted structure for proper pivoting:
+  // The outer group is positioned at the pivot point (Ryuzu location in world space ~ y=2.7).
+  // The inner group is offset downwards so the bell geometry sits correctly relative to the pivot.
+  return (
+    <group ref={groupRef} position={[0, 2.7, 0]}>
+      <group position={[0, -1.7, 0]}>
+        <mesh castShadow receiveShadow>
+          <latheGeometry args={[points, 64]} />
+          <meshStandardMaterial 
+            ref={materialRef}
+            color="#6d5440" 
+            metalness={0.7} 
+            roughness={0.4}
+            envMapIntensity={1.5}
+            emissive="#4a3b2a"
+            emissiveIntensity={0.05}
+          />
+        </mesh>
+        
+        <group>{nubs}</group>
+
+        {/* Ryuzu */}
+        <group position={[0, 1.7, 0]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.3, 0.1, 16, 32]} />
+            <meshStandardMaterial color="#3e2723" metalness={0.8} roughness={0.4} />
+          </mesh>
+        </group>
+        
+        {/* Decorative Bands */}
+        <mesh position={[0, -0.5, 0]}>
+          <cylinderGeometry args={[1.56, 1.6, 0.1, 64, 1, true]} />
+          <meshStandardMaterial color="#3e2723" metalness={0.7} roughness={0.5} side={THREE.DoubleSide} />
+        </mesh>
+        <mesh position={[0, 0.8, 0]}>
+          <cylinderGeometry args={[1.35, 1.38, 0.1, 64, 1, true]} />
+          <meshStandardMaterial color="#3e2723" metalness={0.7} roughness={0.5} side={THREE.DoubleSide} />
         </mesh>
       </group>
-      
-      {/* Decorative Bands */}
-      <mesh position={[0, -0.5, 0]}>
-        <cylinderGeometry args={[1.56, 1.6, 0.1, 64, 1, true]} />
-        <meshStandardMaterial color="#3e2723" metalness={0.7} roughness={0.5} side={THREE.DoubleSide} />
-      </mesh>
-      <mesh position={[0, 0.8, 0]}>
-        <cylinderGeometry args={[1.35, 1.38, 0.1, 64, 1, true]} />
-        <meshStandardMaterial color="#3e2723" metalness={0.7} roughness={0.5} side={THREE.DoubleSide} />
-      </mesh>
     </group>
   );
 };
