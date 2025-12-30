@@ -1,34 +1,29 @@
 
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Stars, Environment, Float } from '@react-three/drei';
+import { OrbitControls, PerspectiveCamera, Stars, Environment, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 
 const Bonsho: React.FC = () => {
-  // Creating a more realistic bell profile
   const points = useMemo(() => {
     const p = [];
-    // Lower lip (flared)
     p.push(new THREE.Vector2(1.8, -1.5));
     p.push(new THREE.Vector2(1.85, -1.3));
-    // Main body (upside down cup tapering upwards)
     for (let i = 0; i <= 10; i++) {
       const t = i / 10;
       const x = 1.8 - (t * 0.6);
       const y = -1.3 + (t * 2.8);
       p.push(new THREE.Vector2(x, y));
     }
-    // Top crown
     p.push(new THREE.Vector2(0.8, 1.6));
     p.push(new THREE.Vector2(0, 1.6));
     return p;
   }, []);
 
-  // Chi (108 nubs) decoration
   const nubs = useMemo(() => {
     const items = [];
     const rows = 4;
-    const cols = 27; // 4 rows * 27 = 108
+    const cols = 27; 
     const radiusStart = 1.2;
     const heightStart = 0.5;
     const heightStep = 0.25;
@@ -37,7 +32,6 @@ const Bonsho: React.FC = () => {
       for (let c = 0; c < cols; c++) {
         const angle = (c / cols) * Math.PI * 2;
         const h = heightStart + (r * heightStep);
-        // Approximate radius at this height based on tapering profile
         const currentRad = 1.6 - (h * 0.2); 
         items.push(
           <mesh key={`${r}-${c}`} position={[
@@ -46,7 +40,7 @@ const Bonsho: React.FC = () => {
             Math.sin(angle) * currentRad
           ]}>
             <sphereGeometry args={[0.04, 8, 8]} />
-            <meshStandardMaterial color="#3a2b1a" metalness={0.9} roughness={0.1} />
+            <meshStandardMaterial color="#5d4037" metalness={0.8} roughness={0.4} />
           </mesh>
         );
       }
@@ -55,32 +49,36 @@ const Bonsho: React.FC = () => {
   }, []);
   
   return (
-    <group position={[0, 1.5, 0]}>
-      {/* Main body of the bell */}
+    <group position={[0, 1.0, 0]}>
       <mesh castShadow receiveShadow>
         <latheGeometry args={[points, 64]} />
         <meshStandardMaterial 
-          color="#3d2f21" 
-          metalness={0.8} 
+          color="#6d5440" 
+          metalness={0.7} 
           roughness={0.4}
-          envMapIntensity={1}
+          envMapIntensity={1.5}
         />
       </mesh>
       
-      {/* Nubs (Chi) */}
       <group>{nubs}</group>
 
-      {/* Ryuzu (Dragon hanger - simplified) */}
+      {/* Ryuzu */}
       <group position={[0, 1.7, 0]}>
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <torusGeometry args={[0.3, 0.1, 16, 32]} />
-          <meshStandardMaterial color="#2a1b0a" metalness={1} roughness={0.2} />
-        </mesh>
-        <mesh position={[0, 0.2, 0]}>
-          <boxGeometry args={[0.4, 0.2, 0.2]} />
-          <meshStandardMaterial color="#2a1b0a" metalness={1} roughness={0.2} />
+          <meshStandardMaterial color="#3e2723" metalness={0.8} roughness={0.4} />
         </mesh>
       </group>
+      
+      {/* Decorative Bands */}
+      <mesh position={[0, -0.5, 0]}>
+        <cylinderGeometry args={[1.56, 1.6, 0.1, 64, 1, true]} />
+        <meshStandardMaterial color="#3e2723" metalness={0.7} roughness={0.5} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[0, 0.8, 0]}>
+        <cylinderGeometry args={[1.35, 1.38, 0.1, 64, 1, true]} />
+        <meshStandardMaterial color="#3e2723" metalness={0.7} roughness={0.5} side={THREE.DoubleSide} />
+      </mesh>
     </group>
   );
 };
@@ -90,19 +88,17 @@ const Shumoku: React.FC<{
   controlsEnabled: (val: boolean) => void;
 }> = ({ onStrike, controlsEnabled }) => {
   const meshRef = useRef<THREE.Group>(null);
-  const { viewport, mouse, size } = useThree();
-  const [isDragging, setIsDragging] = useState(false);
-  const pullRef = useRef(0); // Current pull distance (positive is away from bell)
+  const { viewport, mouse } = useThree();
+  const pullRef = useRef(0); 
   const velocityRef = useRef(0);
   const stateRef = useRef<'idle' | 'dragging' | 'swinging'>('idle');
 
-  const REST_X = 5.5;
+  const REST_X = 5.0;
   const STRIKE_X = 1.8;
   const MAX_PULL = 8.5;
 
   const onPointerDown = (e: any) => {
     e.stopPropagation();
-    setIsDragging(true);
     stateRef.current = 'dragging';
     controlsEnabled(false);
   };
@@ -111,26 +107,21 @@ const Shumoku: React.FC<{
     if (!meshRef.current) return;
 
     if (stateRef.current === 'dragging') {
-      // Calculate world units for dragging
-      const x = (mouse.x * viewport.width) / 2 + 5; // offset to align with start pos
+      const x = (mouse.x * viewport.width) / 2 + 5;
       pullRef.current = THREE.MathUtils.clamp(x, REST_X, MAX_PULL);
       meshRef.current.position.x = pullRef.current;
     } else if (stateRef.current === 'swinging') {
-      // Spring physics toward STRIKE_X
       const force = (STRIKE_X - meshRef.current.position.x) * 45;
       velocityRef.current += force * delta;
-      velocityRef.current *= 0.96; // damping
+      velocityRef.current *= 0.96; 
       meshRef.current.position.x += velocityRef.current * delta;
 
-      // Detect collision
       if (meshRef.current.position.x <= STRIKE_X && velocityRef.current < 0) {
         onStrike();
-        // Bounce back slightly
         velocityRef.current *= -0.3; 
         stateRef.current = 'idle';
       }
     } else {
-      // Slowly return to REST_X if not at it
       meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, REST_X, 0.05);
       velocityRef.current = 0;
     }
@@ -140,7 +131,6 @@ const Shumoku: React.FC<{
     const handlePointerUp = () => {
       if (stateRef.current === 'dragging') {
         stateRef.current = 'swinging';
-        setIsDragging(false);
         controlsEnabled(true);
       }
     };
@@ -151,72 +141,283 @@ const Shumoku: React.FC<{
   return (
     <group 
       ref={meshRef} 
-      position={[REST_X, 1.5, 0]} 
+      position={[REST_X, 1.0, 0]} 
       onPointerDown={onPointerDown}
     >
-      <mesh rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.2, 0.25, 4.5, 32]} />
-        <meshStandardMaterial color="#5d4037" roughness={0.8} />
+      {/* The Beam */}
+      <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.25, 0.3, 4.5, 16]} />
+        <meshStandardMaterial color="#8d6e63" roughness={0.7} />
       </mesh>
-      {/* Ropes (simplified) */}
-      <mesh position={[0, 1.5, 0]}>
-        <cylinderGeometry args={[0.02, 0.02, 3, 8]} />
-        <meshStandardMaterial color="#8d6e63" />
+      {/* End caps */}
+      <mesh position={[2.25, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.32, 0.32, 0.1, 16]} />
+        <meshStandardMaterial color="#5d4037" />
       </mesh>
-      <mesh position={[0, 3, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <boxGeometry args={[0.1, 8, 0.1]} />
-        <meshStandardMaterial color="#111" />
-      </mesh>
+      
+      {/* Ropes hanging from ceiling */}
+      <group position={[0, 2, 0]}>
+         <mesh position={[-1.5, 0, 0]}>
+           <cylinderGeometry args={[0.03, 0.03, 4]} />
+           <meshStandardMaterial color="#d7ccc8" />
+         </mesh>
+         <mesh position={[1.5, 0, 0]}>
+           <cylinderGeometry args={[0.03, 0.03, 4]} />
+           <meshStandardMaterial color="#d7ccc8" />
+         </mesh>
+      </group>
     </group>
   );
 };
 
-interface BellSceneProps {
-  onStrike: () => void;
+const Lantern: React.FC<{ position: [number, number, number] }> = ({ position }) => {
+  return (
+    <group position={position}>
+      {/* Cord */}
+      <mesh position={[0, 0.5, 0]}>
+        <cylinderGeometry args={[0.02, 0.02, 1.5]} />
+        <meshStandardMaterial color="#111" />
+      </mesh>
+      {/* Frame Top */}
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[0.7, 0.1, 0.7]} />
+        <meshStandardMaterial color="#1a1a1a" />
+      </mesh>
+      {/* Light Body */}
+      <mesh position={[0, -0.4, 0]}>
+        <boxGeometry args={[0.5, 0.8, 0.5]} />
+        <meshStandardMaterial color="#ffcc80" emissive="#ff9800" emissiveIntensity={1.0} toneMapped={false} />
+      </mesh>
+      {/* Frame Bottom */}
+      <mesh position={[0, -0.8, 0]}>
+        <boxGeometry args={[0.6, 0.1, 0.6]} />
+        <meshStandardMaterial color="#1a1a1a" />
+      </mesh>
+      {/* Strong point light for local illumination */}
+      <pointLight position={[0, -0.4, 0]} intensity={15} distance={15} color="#ffaa33" decay={2} />
+    </group>
+  );
+};
+
+const TempleStructure: React.FC = () => {
+  return (
+    <group position={[0, 0, 0]}>
+      {/* Floor - Stone Pavement */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.5, 0]} receiveShadow>
+        <planeGeometry args={[30, 30]} />
+        <meshStandardMaterial color="#555" roughness={0.8} />
+      </mesh>
+      
+      {/* Pillars - Slightly lighter wood */}
+      {/* Front Left */}
+      <mesh position={[-4, 2, 4]} castShadow receiveShadow>
+        <boxGeometry args={[0.8, 10, 0.8]} />
+        <meshStandardMaterial color="#5d4037" roughness={0.7} />
+      </mesh>
+      {/* Front Right */}
+      <mesh position={[4, 2, 4]} castShadow receiveShadow>
+        <boxGeometry args={[0.8, 10, 0.8]} />
+        <meshStandardMaterial color="#5d4037" roughness={0.7} />
+      </mesh>
+      {/* Back Left */}
+      <mesh position={[-4, 2, -4]} castShadow receiveShadow>
+        <boxGeometry args={[0.8, 10, 0.8]} />
+        <meshStandardMaterial color="#4e342e" roughness={0.7} />
+      </mesh>
+      {/* Back Right */}
+      <mesh position={[4, 2, -4]} castShadow receiveShadow>
+        <boxGeometry args={[0.8, 10, 0.8]} />
+        <meshStandardMaterial color="#4e342e" roughness={0.7} />
+      </mesh>
+
+      {/* Cross Beams */}
+      <mesh position={[0, 6, 4]} castShadow>
+        <boxGeometry args={[10, 0.6, 0.6]} />
+        <meshStandardMaterial color="#6d4c41" />
+      </mesh>
+      <mesh position={[0, 6, -4]} castShadow>
+        <boxGeometry args={[10, 0.6, 0.6]} />
+        <meshStandardMaterial color="#6d4c41" />
+      </mesh>
+      <mesh position={[-4, 6, 0]} rotation={[0, Math.PI/2, 0]} castShadow>
+        <boxGeometry args={[10, 0.6, 0.6]} />
+        <meshStandardMaterial color="#6d4c41" />
+      </mesh>
+      <mesh position={[4, 6, 0]} rotation={[0, Math.PI/2, 0]} castShadow>
+        <boxGeometry args={[10, 0.6, 0.6]} />
+        <meshStandardMaterial color="#6d4c41" />
+      </mesh>
+
+      {/* Roof Rafters (Simplified) */}
+      <group position={[0, 6.5, 0]}>
+         {[...Array(9)].map((_, i) => (
+            <mesh key={i} position={[0, 0, (i - 4) * 1.5]} rotation={[0, 0, 0]} castShadow>
+              <boxGeometry args={[12, 0.3, 0.3]} />
+              <meshStandardMaterial color="#5d4037" />
+            </mesh>
+         ))}
+         <mesh position={[0, 0.5, 0]} castShadow>
+             <boxGeometry args={[0.8, 1, 12]} />
+             <meshStandardMaterial color="#4e342e" />
+         </mesh>
+      </group>
+
+      {/* Lanterns */}
+      <Lantern position={[-3.2, 4.5, 3.2]} />
+      <Lantern position={[3.2, 4.5, 3.2]} />
+      <Lantern position={[-3.2, 4.5, -3.2]} />
+      <Lantern position={[3.2, 4.5, -3.2]} />
+    </group>
+  );
+};
+
+const Snow: React.FC = () => {
+  const count = 400;
+  const mesh = useRef<THREE.Points>(null);
+  
+  const particles = useMemo(() => {
+    const temp = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      temp[i * 3] = (Math.random() - 0.5) * 20;
+      temp[i * 3 + 1] = Math.random() * 10;
+      temp[i * 3 + 2] = (Math.random() - 0.5) * 20;
+    }
+    return temp;
+  }, []);
+
+  useFrame((state) => {
+    if (!mesh.current) return;
+    const positions = mesh.current.geometry.attributes.position.array as Float32Array;
+    for (let i = 0; i < count; i++) {
+      positions[i * 3 + 1] -= 0.03; 
+      if (positions[i * 3 + 1] < -2) {
+        positions[i * 3 + 1] = 8;
+      }
+    }
+    mesh.current.geometry.attributes.position.needsUpdate = true;
+  });
+
+  return (
+    <points ref={mesh}>
+      <bufferGeometry>
+        <bufferAttribute
+          attach="attributes-position"
+          count={count}
+          array={particles}
+          itemSize={3}
+        />
+      </bufferGeometry>
+      <pointsMaterial size={0.05} color="#fff" transparent opacity={0.6} />
+    </points>
+  );
+};
+
+const Tree: React.FC<{ position: [number, number, number], scale?: number }> = ({ position, scale = 1 }) => {
+    return (
+        <group position={position} scale={scale}>
+            <mesh position={[0, 2, 0]}>
+                <coneGeometry args={[1, 4, 8]} />
+                <meshStandardMaterial color="#2a3a30" roughness={1} />
+            </mesh>
+            <mesh position={[0, 4, 0]}>
+                <coneGeometry args={[0.8, 3, 8]} />
+                <meshStandardMaterial color="#2a3a30" roughness={1} />
+            </mesh>
+            <mesh position={[0, 0, 0]}>
+                <cylinderGeometry args={[0.2, 0.3, 1]} />
+                <meshStandardMaterial color="#2a1a10" />
+            </mesh>
+        </group>
+    )
 }
 
-const BellScene: React.FC<BellSceneProps> = ({ onStrike }) => {
+const BackgroundTrees: React.FC = () => {
+    return (
+        <group>
+            <Tree position={[-8, -2.5, -8]} scale={1.5} />
+            <Tree position={[8, -2.5, -10]} scale={1.8} />
+            <Tree position={[-12, -2.5, -5]} scale={2} />
+            <Tree position={[10, -2.5, -4]} scale={1.2} />
+            <Tree position={[0, -2.5, -15]} scale={2.5} />
+            <Tree position={[-5, -2.5, -12]} scale={1.8} />
+            <Tree position={[5, -2.5, -12]} scale={2.0} />
+        </group>
+    )
+}
+
+const BellScene: React.FC<{ onStrike: () => void }> = ({ onStrike }) => {
   const [orbitEnabled, setOrbitEnabled] = useState(true);
 
   return (
     <>
-      <ambientLight intensity={0.2} />
-      <pointLight position={[10, 10, 10]} intensity={2} castShadow />
-      <spotLight position={[-10, 10, 0]} angle={0.3} penumbra={1} intensity={3} castShadow />
-      <pointLight position={[2, 0, 5]} intensity={1} color="#ffaa55" />
+      {/* Background & Fog */}
+      <color attach="background" args={['#0a0a1a']} />
+      <fog attach="fog" args={['#0a0a1a', 5, 30]} />
       
+      {/* 1. Global Ambient Light - Raised base brightness */}
+      <ambientLight intensity={0.4} color="#333344" />
+
+      {/* 2. Hemisphere Light - Simulates Sky/Ground reflection (Fill) */}
+      <hemisphereLight args={['#6666aa', '#332222', 0.6]} />
+
+      {/* 3. Key Light (Moon) - Strong cold light from left */}
+      <directionalLight 
+        position={[-5, 8, 5]} 
+        intensity={2.5} 
+        color="#ddeeff" 
+        castShadow
+        shadow-bias={-0.001}
+      />
+
+      {/* 4. Fill Light (Warm) - Strong warm light from front-right (simulating temple lighting) */}
+      <spotLight
+        position={[4, 4, 8]}
+        angle={0.8}
+        penumbra={0.5}
+        intensity={8.0}
+        color="#ffaa77"
+        castShadow
+        distance={25}
+      />
+      
+      {/* 5. Rim Light (Back) - Defines silhouette */}
+      <spotLight
+        position={[-5, 5, -5]}
+        angle={0.5}
+        penumbra={0.5}
+        intensity={4.0}
+        color="#5566ff"
+        distance={20}
+      />
+      
+      <TempleStructure />
       <Bonsho />
       <Shumoku onStrike={onStrike} controlsEnabled={setOrbitEnabled} />
-      
-      {/* Traditional Wooden Temple Structure (Simplified) */}
-      <group position={[0, -2.5, 0]}>
-        {/* Floor */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-          <planeGeometry args={[30, 30]} />
-          <meshStandardMaterial color="#111" roughness={1} />
-        </mesh>
-        {/* Pillars */}
-        <mesh position={[-4, 4, -4]}><boxGeometry args={[0.5, 8, 0.5]} /><meshStandardMaterial color="#221100" /></mesh>
-        <mesh position={[4, 4, -4]}><boxGeometry args={[0.5, 8, 0.5]} /><meshStandardMaterial color="#221100" /></mesh>
-        <mesh position={[-4, 4, 4]}><boxGeometry args={[0.5, 8, 0.5]} /><meshStandardMaterial color="#221100" /></mesh>
-        <mesh position={[4, 4, 4]}><boxGeometry args={[0.5, 8, 0.5]} /><meshStandardMaterial color="#221100" /></mesh>
-      </group>
+      <Snow />
+      <BackgroundTrees />
 
-      <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
-      <Environment preset="night" />
-      <OrbitControls enabled={orbitEnabled} enableZoom={true} enablePan={false} maxPolarAngle={Math.PI / 1.8} />
-      <PerspectiveCamera makeDefault position={[0, 3, 10]} fov={45} />
+      <Stars radius={100} depth={50} count={3000} factor={4} saturation={0} fade speed={1} />
+      <OrbitControls 
+        enabled={orbitEnabled} 
+        enableZoom={true} 
+        enablePan={false} 
+        maxPolarAngle={Math.PI / 1.9} 
+        minPolarAngle={Math.PI / 4}
+        minDistance={5}
+        maxDistance={15}
+      />
+      <PerspectiveCamera makeDefault position={[0, 2, 9]} fov={50} />
     </>
   );
 };
 
-const Bell3D: React.FC<BellSceneProps> = (props) => {
+const Bell3D: React.FC<{ onStrike: () => void }> = ({ onStrike }) => {
   return (
-    <div className="w-full h-full bg-black">
-      <Canvas shadows>
-        <BellScene {...props} />
+    <div className="w-full h-full bg-black relative">
+      <Canvas shadows dpr={[1, 2]}>
+        <BellScene onStrike={onStrike} />
       </Canvas>
-      <div className="absolute top-20 left-1/2 -translate-x-1/2 pointer-events-none text-white/40 text-sm font-bold uppercase tracking-widest bg-black/30 px-4 py-1 rounded-full backdrop-blur-sm">
+      <div className="absolute top-20 left-1/2 -translate-x-1/2 pointer-events-none text-white/80 text-xs md:text-sm font-bold uppercase tracking-widest bg-black/40 px-6 py-2 rounded-full backdrop-blur-sm border border-white/20">
         突き棒を後ろに引いて離してください
       </div>
     </div>
