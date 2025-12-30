@@ -1,0 +1,7 @@
+{
+  "name": "Joya no Kane - Virtual Bell Ringing",
+  "description": "A traditional Japanese New Year experience where you visit temples on a map and ring the sacred bell 108 times to cleanse the worldly desires. Features 3D bell visualization and AI-powered temple histories.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
