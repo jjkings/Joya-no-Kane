@@ -1,8 +1,36 @@
-
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Stars, Environment, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
+
+// Fix for missing JSX intrinsic elements definitions for React Three Fiber
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      mesh: any;
+      group: any;
+      latheGeometry: any;
+      meshStandardMaterial: any;
+      sphereGeometry: any;
+      torusGeometry: any;
+      cylinderGeometry: any;
+      boxGeometry: any;
+      pointLight: any;
+      planeGeometry: any;
+      bufferGeometry: any;
+      bufferAttribute: any;
+      pointsMaterial: any;
+      points: any;
+      coneGeometry: any;
+      color: any;
+      fog: any;
+      ambientLight: any;
+      hemisphereLight: any;
+      directionalLight: any;
+      spotLight: any;
+    }
+  }
+}
 
 const Bonsho: React.FC = () => {
   const groupRef = useRef<THREE.Group>(null);

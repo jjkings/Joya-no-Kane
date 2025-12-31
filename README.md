@@ -1,20 +1,74 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 除夜の鐘 - Joya no Kane
 
-# Run and deploy your AI Studio app
+バーチャルで除夜の鐘を体験できるWebアプリケーションです。
+地図上からお寺を選び、3D空間で鐘を突き、煩悩の数である108回を目指します。
+Google Gemini APIを活用し、お寺の歴史や由緒の解説、現在地周辺のお寺検索機能を提供しています。
 
-This contains everything you need to run your app locally.
+## 機能
 
-View your app in AI Studio: https://ai.studio/apps/drive/1yqfh76Y_Vddus6xZZKNy52twXtVpMFpU
+*   **3D鐘突き体験**: Three.jsを使用したリアルな3D描画と物理挙動。マウス操作で撞木（しゅもく）を引き、鐘を突くことができます。
+*   **お寺マップ**: 日本各地の有名なお寺を地図上に表示。
+*   **AIによるお寺検索 (Grounding)**: Google Gemini API (Google Maps Grounding) を使用し、地図上の現在地周辺にあるお寺を検索・追加できます。
+*   **AI解説 (Grounding)**: お寺を選択すると、Google Search Groundingを用いて最新かつ詳細な由緒・歴史を表示します。
+*   **108回のカウント**: 煩悩を払うためのカウント機能と、満願成就のエフェクト。
 
-## Run Locally
+## 動作環境・準備
 
-**Prerequisites:**  Node.js
+このアプリケーションを実行するには、Google Gemini APIキーが必要です。
 
+1.  **Google AI Studio** ( https://aistudio.google.com/ ) でAPIキーを取得してください。
+2.  このAPIキーは、Gemini 2.5系モデルやGrounding機能を使用するため、適切なプロジェクト設定（課金設定等が必要な場合があります）を行ってください。
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 起動方法
+
+※ このプロジェクトはReact環境で動作します。
+
+1.  **環境変数の設定**
+    実行環境の環境変数 `API_KEY` に、取得したGoogle Gemini APIキーを設定してください。
+    （`.env`ファイルなどを使用する場合は、ビルドツールに合わせて設定してください）
+
+2.  **依存関係のインストール**
+    ```bash
+    npm install
+    ```
+
+3.  **開発サーバーの起動**
+    ```bash
+    npm start
+    # または
+    npm run dev
+    ```
+
+4.  ブラウザでアプリケーションを開きます（通常は `http://localhost:3000` や `http://localhost:5173` など）。
+
+## 使い方
+
+### 1. お寺を選ぶ (地図モード)
+*   **マップ操作**: ドラッグやズームで地図を移動できます。
+*   **マーカー選択**: 地図上のピンをクリックすると、お寺の名前と「参拝する」ボタンが表示されます。
+*   **周辺検索**: 「このエリアのお寺を検索」ボタンを押すと、現在表示されている地図の中心付近にあるお寺をAIが探し出し、地図に追加します。
+
+### 2. 鐘を突く (3Dモード)
+お寺を選択すると、鐘突堂（3Dビュー）とお寺の詳細情報画面に切り替わります。
+
+*   **鐘の突き方**:
+    1.  画面中央の**突き棒（撞木）**をマウスでクリックしたまま、**左（後ろ）方向へドラッグ**します。
+    2.  十分に引いたら**マウスボタンを離します**。
+    3.  棒が勢いよく戻り、鐘に当たると音が鳴ります。
+*   **視点操作**: 画面の何もないところをドラッグすると、カメラアングルを変更できます。
+
+### 3. 解説を読む
+画面右側（スマホでは下部）に、AIが生成したお寺の由緒や歴史が表示されます。出典元へのリンクも提供されます。
+
+### 4. 108回を目指す
+画面右上のカウンターが進みます。108回突き終わると「満願成就」となり、最初からやり直すことができます。
+
+## 技術スタック
+*   React 19
+*   TypeScript
+*   Three.js / React Three Fiber (3D描画)
+*   Leaflet / React Leaflet (地図表示)
+*   Google Gemini API (gemini-2.5-flash)
+    *   Google Search Grounding
+    *   Google Maps Grounding
+*   Tailwind CSS (スタイリング)
